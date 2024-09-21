@@ -1,11 +1,11 @@
 import streamlit as st
 from datetime import datetime, timedelta
 import pandas as pd
-from Main import load_data, get_probability, weather_probability
+from Main import get_weather_data, get_probability, weather_probability
 # Load data
 @st.cache_data
 def load_weather_data():
-    return load_data('weather.csv')
+    return get_weather_data()
 
 data = load_weather_data()
 
