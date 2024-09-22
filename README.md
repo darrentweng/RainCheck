@@ -10,6 +10,8 @@ A user (customer, hotel, etc...) can enter a location, date range, and insurance
 
 We use Streamlit to do this as provides both front-end and back-end capabilities, which is perfect for quick prototyping. We downloaded a sample 3-city, 18-years historical weather dataset from NOAA (https://www.ncdc.noaa.gov/cdo-web/).
 
+We used mongodb Atlas to store the tabular data, and the Capital One "nessieisreal" API to simulate payments.
+
 Since we only have 18 years of data, to reduce variance, we consider data from n (default:7) days before and after the selected date to calculate probability, which provides a more representative probability in our tests.
 
 #### Smoothing / Statistical Details
