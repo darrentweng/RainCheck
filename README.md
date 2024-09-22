@@ -51,3 +51,6 @@ podman exec -it wc bash  // enter the container
 podman exec wc pip install xxx // install package, or run other command
 podman start -a wc // start the container with attach mode (if you want to see the stdout)
 ```
+
+
+When launching the app, to intialize information for Nessie (Capital One's Hackathon API)

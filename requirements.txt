@@ -3,3 +3,4 @@ matplotlib
 plotly
 lxml
 pymongo
+requests
