@@ -7,7 +7,7 @@ from Main import load_data, weather_probability
 # Load data
 @st.cache_data
 def load_weather_data():
-    return load_data("weather.csv")
+    return load_data()
 
 
 data = load_weather_data()
@@ -68,28 +68,45 @@ if st.button("Calculate Premiums"):
         ma_type,
         window,
     )
+    print(probabilities)
+    
+    if probabilities is None:
+        st.error("No data available for the selected parameters.")
+    else:
+        results = []
+        for current_date in date_range(start_date, end_date):
+            # Convert current_date to pd.Timestamp to match probabilities keys
+            current_timestamp = pd.Timestamp(current_date)
 
-    results = []
-    for current_date in date_range(start_date, end_date):
-        if all(
-            field in probabilities and current_date in probabilities[field]
-            for field in ["TMAX", "TMIN", "PRCP"]
-        ):
-            prob = 1.0 - (
-                (1.0 - probabilities["TMAX"][current_date])
-                * (1.0 - probabilities["TMIN"][current_date])
-                * (1.0 - probabilities["PRCP"][current_date])
-            )
-            premium = calculate_premium(prob, insurance_amount)
-            results.append(
-                {
-                    "Date": current_date.strftime("%m/%d"),
-                    "Max Temp Prob": f"{probabilities['TMAX'][current_date]:.2%}",
-                    "Min Temp Prob": f"{probabilities['TMIN'][current_date]:.2%}",
-                    "Precip Prob": f"{probabilities['PRCP'][current_date]:.2%}",
-                    "Premium": f"${premium:.2f}",
-                }
-            )
+            if all(
+                field in probabilities and current_timestamp in probabilities[field]
+                for field in ["TMAX", "TMIN", "PRCP"]
+            ):
+                prob_tmax = probabilities["TMAX"].get(current_timestamp, 0)
+                prob_tmin = probabilities["TMIN"].get(current_timestamp, 0)
+                prob_prcp = probabilities["PRCP"].get(current_timestamp, 0)
+
+                # Ensure probabilities are valid numbers
+                if any(pd.isna([prob_tmax, prob_tmin, prob_prcp])):
+                    continue
+
+                prob = 1.0 - (
+                    (1.0 - prob_tmax)
+                    * (1.0 - prob_tmin)
+                    * (1.0 - prob_prcp)
+                )
+                premium = calculate_premium(prob, insurance_amount)
+                results.append(
+                    {
+                        "Date": current_date.strftime("%m/%d"),
+                        "Max Temp Prob": f"{prob_tmax:.2%}",
+                        "Min Temp Prob": f"{prob_tmin:.2%}",
+                        "Precip Prob": f"{prob_prcp:.2%}",
+                        "Premium": f"${premium:.2f}",
+                    }
+                )
+
+    
 
     if results:
         df = pd.DataFrame(results)

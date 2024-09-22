@@ -3,7 +3,10 @@ import pandas as pd
 import numpy as np
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
+from io import StringIO
+import datetime
 
+# MongoDB Connection Setup
 mongo_secrets = st.secrets.mongo
 
 uri = f"mongodb+srv://{mongo_secrets['username']}:{mongo_secrets['password']}@{mongo_secrets['cluster_url']}/weatherDB?retryWrites=true&w=majority&appName=WeatherApp"
@@ -15,22 +18,69 @@ client = MongoClient(uri, server_api=ServerApi("1"))
 db = client.weatherDB
 collection = db.weatherData
 
-# Test
+# Test Connection
 try:
     client.admin.command("ping")
-    st.toast("Connected to database successfully!")
+    st.success("Connected to MongoDB successfully!")
 except Exception as e:
     st.error(f"Could not connect to MongoDB: {e}")
+    st.stop()  # Stop the app if the database connection fails
 
+# Function to Upload CSV Data to MongoDB
+def upload_csv_to_mongodb(uploaded_file):
+    try:
+        # Read the uploaded CSV file
+        df = pd.read_csv(uploaded_file)
+        
+        # Ensure DATE column is in datetime format
+        df["DATE"] = pd.to_datetime(df["DATE"], format="%m/%d/%Y")
+        
+        # Convert DataFrame to dictionary records
+        records = df.to_dict(orient='records')
+        
+        # Optional: Clear existing data to prevent duplicates
+        # Uncomment the next line if you want to clear existing data before upload
+        # collection.delete_many({})
+        
+        # Insert records into MongoDB
+        if records:
+            collection.insert_many(records)
+            st.success("CSV data uploaded to MongoDB successfully!")
+        else:
+            st.warning("No records found in the uploaded CSV.")
+    except Exception as e:
+        st.error(f"Error uploading CSV to MongoDB: {e}")
 
-def load_data(file_path):
-    df = pd.read_csv(file_path)
-    df["DATE"] = pd.to_datetime(df["DATE"], format="%m/%d/%Y")
-    df.set_index(["NAME", "DATE"], inplace=True)
-    return df
+# Function to Load Data from MongoDB
+@st.cache_data  # Cache the data to improve performance
+def load_data():
+    try:
+        # Query all documents in the collection
+        cursor = collection.find({})
+        data = list(cursor)
+        
+        if not data:
+            st.warning("No data found in MongoDB. Please upload a CSV file first.")
+            return pd.DataFrame()  # Return empty DataFrame
+        
+        # Convert list of dictionaries to DataFrame
+        df = pd.DataFrame(data)
+        
+        # Convert DATE column to datetime if not already
+        if not np.issubdtype(df['DATE'].dtype, np.datetime64):
+            df["DATE"] = pd.to_datetime(df["DATE"], format="%m/%d/%Y")
+        
+        # Set multi-index
+        df.set_index(["NAME", "DATE"], inplace=True)
+        
+        return df
+    except Exception as e:
+        st.error(f"Error loading data from MongoDB: {e}")
+        return pd.DataFrame()
 
-
+# Function to Calculate Moving Average 
 def calculate_moving_average(data, window, ma_type):
+
     if ma_type == "SMA":
         return data.rolling(window=window).mean()
     elif ma_type == "WMA":
@@ -46,7 +96,7 @@ def calculate_moving_average(data, window, ma_type):
     else:
         return data
 
-
+# Function to Get Probabilities
 def get_probabilities(
     data,
     name,
@@ -58,6 +108,7 @@ def get_probabilities(
     ma_type=None,
     window=5,
 ):
+    print(f"Getting probabilities for {field}")
     start_date = pd.to_datetime(start_date)
     end_date = pd.to_datetime(end_date)
     # Separate smoothing for each year
@@ -105,24 +156,29 @@ def get_probabilities(
     probabilities = {}
     for date in date_range:
         mask = (
-            (all_years_ma.index.month == date.month)
-            & (all_years_ma.index.day >= date.day - days_range)
-            & (all_years_ma.index.day <= date.day + days_range)
+            (all_years_ma.index.get_level_values("DATE").month == date.month)
+            & (all_years_ma.index.get_level_values("DATE").day >= date.day - days_range)
+            & (all_years_ma.index.get_level_values("DATE").day <= date.day + days_range)
         )
         relevant_data = all_years_ma[mask]
 
-        if field in ["TMAX", "AWND"]:
+        if relevant_data.empty:
+            prob = None  # Handle cases with no relevant data
+        elif field in ["TMAX", "AWND"]:
             prob = (relevant_data > threshold).mean()
         elif field in ["PRCP", "SNOW"]:
             prob = (relevant_data >= threshold).mean()
         elif field in ["TMIN"]:
             prob = (relevant_data < threshold).mean()
+        else:
+            prob = None  # Handle unexpected fields
 
         probabilities[date] = prob
 
     return probabilities
 
 
+# Function to Calculate Weather Probability
 def weather_probability(
     data,
     name,
@@ -147,5 +203,23 @@ def weather_probability(
         ),
     }
 
-
+# Streamlit App Layout
 st.title("Weather Insurance Calculator")
+
+# Section to Upload CSV to MongoDB
+st.header("Upload Weather Data CSV to MongoDB")
+
+uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
+
+if uploaded_file is not None:
+    if st.button("Upload CSV to Database"):
+        upload_csv_to_mongodb(uploaded_file)
+
+# Load Data from MongoDB
+data = load_data()
+
+
+# Optional: Display Data from MongoDB
+if st.checkbox("Show Raw Data from MongoDB"):
+    st.subheader("Raw Weather Data")
+    st.dataframe(data.reset_index())

@@ -7,7 +7,7 @@ from Main import load_data, weather_probability
 # Load data
 @st.cache_data
 def load_weather_data():
-    return load_data("weather.csv")
+    return load_data()
 
 
 data = load_weather_data()
