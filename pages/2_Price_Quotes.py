@@ -157,13 +157,6 @@ if st.session_state.quotestage >= 2:
         status="pending",
         description=description
     )
-    
-    if response.status_code == 201:
-        print("Sucesss")
-        #st.success("Payment successful!")
-    else:
-        print("Fail")
-        #st.error(f"Payment failed: {response.text}")
 
 # Display data range
 station_data = data.loc[name]
