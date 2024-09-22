@@ -1,5 +1,5 @@
 import streamlit as st
-from Main import load_data, get_probability, weather_probability
+from Main import load_data, weather_probability
 import requests
 import json
 
