@@ -132,7 +132,6 @@ if st.session_state.quotestage >= 1:
         st.error("No data available for the selected parameters.")
 
 if st.session_state.quotestage >= 2:
-    print("AFTER BUTTON")
     # Call Nessie API to create a purchase
     api_key = get_api_key()
 
@@ -148,7 +147,6 @@ if st.session_state.quotestage >= 2:
     
     total_premium_markup = total_premium * 1.05
     st.write(f"Total Premium (with markup): ${total_premium_markup:.2f}")
-    print("PLEASE WORKKKK")
     response = create_purchase(
         account_id=account_id,
         api_key=api_key,
@@ -159,14 +157,6 @@ if st.session_state.quotestage >= 2:
         status="pending",
         description=description
     )
-    
-    print(response.content)
-    if response.status_code == 201:
-        print("Sucesss")
-        #st.success("Payment successful!")
-    else:
-        print("Fail")
-        #st.error(f"Payment failed: {response.text}")
 
 # Display data range
 station_data = data.loc[name]
