@@ -53,4 +53,4 @@ podman start -a wc // start the container with attach mode (if you want to see t
 ```
 
 
-When launching the app, to intialize information for Nessie (Capital One's Hackathon API)
+When launching the app, to intialize information for Nessie (Capital One's Hackathon API), run ```init.py```. 
