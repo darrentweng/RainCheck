@@ -1,0 +1,13 @@
+[project]
+name = "weatherpricer"
+version = "0.1.0"
+description = "Tool for pricing in bad weather conditions"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "lxml",
+    "matplotlib",
+    "plotly",
+    "pymongo",
+    "streamlit",
+]
